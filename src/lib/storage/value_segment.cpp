@@ -14,7 +14,6 @@ namespace opossum {
 
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  // throw std::runtime_error("Implement ValueSegment::operator[]");
   DebugAssert(chunk_offset < _container.size(), "Index out of range (ValueSegment)");
   return _container.at(chunk_offset);
 }

@@ -58,7 +58,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
   _chunks.back().append(values);
 }
 
-ColumnCount Table::column_count() const { return _chunks.at(0).column_count(); }
+ColumnCount Table::column_count() const { return _chunks[0].column_count(); }
 
 uint64_t Table::row_count() const {
   uint64_t total_row_count = 0;
@@ -70,7 +70,7 @@ uint64_t Table::row_count() const {
   return total_row_count;
 }
 
-ChunkID Table::chunk_count() const { return ChunkID{(uint16_t)_chunks.size()}; }
+ChunkID Table::chunk_count() const { return (ChunkID) _chunks.size(); }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   auto result = std::find(_column_names.begin(), _column_names.end(), column_name);

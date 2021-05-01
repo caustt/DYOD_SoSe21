@@ -66,7 +66,7 @@ class DictionarySegment : public BaseSegment {
   void append(const AllTypeVariant& val) override {}
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const { return nullptr; }
+  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary; }
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const { return nullptr; }
@@ -89,7 +89,7 @@ class DictionarySegment : public BaseSegment {
   ValueID upper_bound(const AllTypeVariant& value) const { return ValueID{0}; }
 
   // return the number of unique_values (dictionary entries)
-  size_t unique_values_count() const { return 0; }
+  size_t unique_values_count() const { return _dictionary->size(); }
 
   // return the number of entries
   ChunkOffset size() const override { return _attribute_vector->size(); }

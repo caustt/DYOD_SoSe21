@@ -52,7 +52,7 @@ void StorageManager::print(std::ostream& out) const {
     auto rows = table->row_count();
     auto chunks = table->chunk_count();
 
-    out << "Table name: " << table_name << " # columns: " << columns << " # rows: " << rows << " # chunks: " << chunks
+    out << "Table name: " << table_name << ", #columns: " << columns << ", #rows: " << rows << ", #chunks: " << chunks
         << '\n';
   }
 }

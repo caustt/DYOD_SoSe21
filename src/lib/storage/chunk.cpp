@@ -9,6 +9,8 @@
 
 #include "base_segment.hpp"
 #include "chunk.hpp"
+#include "dictionary_segment.hpp"
+#include "resolve_type.hpp"
 
 #include "utils/assert.hpp"
 
@@ -35,6 +37,26 @@ ChunkOffset Chunk::size() const {
   } else {
     return 0;
   }
+}
+
+std::shared_ptr<Chunk> Chunk::apply_dictionary_encoding(const Chunk& chunk,
+                                                        const std::vector<std::string>& column_names) {
+  std::shared_ptr<Chunk> encoded_chunk = std::make_shared<Chunk>();
+  auto column_count = chunk.column_count();
+  for (ColumnCount column_id{0}; column_id < column_count; column_id++) {
+    std::shared_ptr<BaseSegment> segment = chunk.get_segment(ColumnID{column_id});
+    auto type = column_names.at(column_id);
+
+    resolve_data_type(type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+
+      std::shared_ptr<DictionarySegment<ColumnDataType>> encoded_segment =
+                                                             std::make_shared<DictionarySegment<ColumnDataType>>(segment);
+      encoded_chunk->add_segment(encoded_segment);
+    });
+  }
+
+  return encoded_chunk;
 }
 
 }  // namespace opossum

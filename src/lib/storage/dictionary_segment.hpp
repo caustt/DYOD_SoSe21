@@ -8,6 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -25,55 +26,80 @@ class DictionarySegment : public BaseSegment {
   /**
    * Creates a Dictionary segment from a given value segment.
    */
-  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment);
+  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) {
+    auto value_segment = std::static_pointer_cast<ValueSegment<T>>(base_segment);
+    std::set<T> distinct_values;
+    for (auto value : value_segment->values()) {
+      distinct_values.insert(value);
+    }
+
+    _dictionary = std::make_shared<std::vector<T>>(distinct_values.begin(), distinct_values.end());
+
+    std::map<T, uint32_t> values_to_index;
+    uint32_t index = 0;
+
+    for (auto value : distinct_values) {
+      values_to_index[value] = index;
+      index++;
+    }
+
+    _attribute_vector = std::make_shared<std::vector<uint32_t>>();
+    _attribute_vector->reserve(value_segment->size());
+
+    index = 0;
+    for (auto value : value_segment->values()) {
+      auto value_id = values_to_index.at(value);
+      _attribute_vector->push_back(value_id);
+    }
+  }
 
   // SEMINAR INFORMATION: Since most of these methods depend on the template parameter, you will have to implement
   // the DictionarySegment in this file. Replace the method signatures with actual implementations.
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override { return nullptr; };
 
   // return the value at a certain position.
-  T get(const size_t chunk_offset) const;
+  T get(const size_t chunk_offset) const { return nullptr; }
 
   // dictionary segments are immutable
-  void append(const AllTypeVariant& val) override;
+  void append(const AllTypeVariant& val) override {}
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const;
+  std::shared_ptr<const std::vector<T>> dictionary() const { return nullptr; }
 
   // returns an underlying data structure
-  std::shared_ptr<const BaseAttributeVector> attribute_vector() const;
+  std::shared_ptr<const BaseAttributeVector> attribute_vector() const { return nullptr; }
 
   // return the value represented by a given ValueID
-  const T& value_by_value_id(ValueID value_id) const;
+  const T& value_by_value_id(ValueID value_id) const { return nullptr; }
 
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
-  ValueID lower_bound(T value) const;
+  ValueID lower_bound(T value) const { return ValueID{0}; }
 
   // same as lower_bound(T), but accepts an AllTypeVariant
-  ValueID lower_bound(const AllTypeVariant& value) const;
+  ValueID lower_bound(const AllTypeVariant& value) const { return ValueID{0}; }
 
   // returns the first value ID that refers to a value > the search value
   // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
-  ValueID upper_bound(T value) const;
+  ValueID upper_bound(T value) const { return ValueID{0}; }
 
   // same as upper_bound(T), but accepts an AllTypeVariant
-  ValueID upper_bound(const AllTypeVariant& value) const;
+  ValueID upper_bound(const AllTypeVariant& value) const { return ValueID{0}; }
 
   // return the number of unique_values (dictionary entries)
-  size_t unique_values_count() const;
+  size_t unique_values_count() const { return 0; }
 
   // return the number of entries
-  ChunkOffset size() const override;
+  ChunkOffset size() const override { return _attribute_vector->size(); }
 
   // returns the calculated memory usage
-  size_t estimate_memory_usage() const final;
+  size_t estimate_memory_usage() const final { return 0; }
 
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
-  std::shared_ptr<BaseAttributeVector> _attribute_vector;
+  std::shared_ptr<std::vector<u_int32_t>> _attribute_vector;
 };
 
 }  // namespace opossum

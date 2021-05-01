@@ -83,7 +83,7 @@ uint64_t Table::row_count() const {
   return total_row_count;
 }
 
-ChunkID Table::chunk_count() const { return ChunkID{(uint16_t)_chunks.size()}; }
+ChunkID Table::chunk_count() const { return (ChunkID) _chunks.size(); }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   auto result = std::find(_column_names.begin(), _column_names.end(), column_name);

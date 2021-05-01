@@ -56,4 +56,27 @@ TEST_F(StorageStorageManagerTest, HasTable) {
   EXPECT_EQ(sm.has_table("first_table"), true);
 }
 
+TEST_F(StorageStorageManagerTest, Print) {
+  auto& sm = StorageManager::get();
+
+  // add some sample data for evaluating print method
+  std::shared_ptr<Table> first = sm.get_table("first_table");
+  first->add_column("test", "int");
+  first->append({3});
+  first->append({333});
+
+  std::stringstream buffer;
+  sm.print(buffer);
+
+  EXPECT_EQ(buffer.str(),
+            "Table name: first_table, #columns: 1, #rows: 2, #chunks: 1\n"
+            "Table name: second_table, #columns: 0, #rows: 0, #chunks: 1\n");
+}
+
+TEST_F(StorageStorageManagerTest, TableNames) {
+  auto& sm = StorageManager::get();
+  EXPECT_EQ(sm.table_names()[0], "first_table");
+  EXPECT_EQ(sm.table_names()[1], "second_table");
+}
+
 }  // namespace opossum

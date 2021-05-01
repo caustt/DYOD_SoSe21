@@ -94,6 +94,10 @@ Chunk& Table::get_chunk(ChunkID chunk_id) { return *_chunks.at(chunk_id); }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return *_chunks.at(chunk_id); }
 
-void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("Implement Table::compress_chunk"); }
+void Table::compress_chunk(ChunkID chunk_id) {
+  const Chunk& chunk = get_chunk(chunk_id);
+  std::shared_ptr<Chunk> encoded_chunk = Chunk::apply_dictionary_encoding(chunk, _column_types);
+  _chunks[chunk_id] = encoded_chunk;  //TODO: chweck if suitabl
+}
 
 }  // namespace opossum

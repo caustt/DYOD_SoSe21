@@ -15,39 +15,31 @@ StorageManager& StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  _table_names.emplace_back(name);
-  _tables.emplace_back(table);
+  DebugAssert(!has_table(name), "Table with the given name already exists");
+  _table_mapping[name] = table;
 }
 
 void StorageManager::drop_table(const std::string& name) {
-  size_t index = _get_index_for_table(name);
-  _tables.erase(_tables.begin() + index);
-  _table_names.erase(_table_names.begin() + index);
+  DebugAssert(has_table(name), "Table with the given name doesn't exists");
+  _table_mapping.erase(name);
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  auto index = _get_index_for_table(name);
-  return _tables.at(index);
-}
+std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const { return _table_mapping.at(name); }
 
-size_t StorageManager::_get_index_for_table(const std::string& name) const {
-  auto result = std::find(_table_names.begin(), _table_names.end(), name);
-  if (result == _table_names.end()) {
-    throw std::runtime_error("Table not found.");
+bool StorageManager::has_table(const std::string& name) const { return _table_mapping.contains(name); }
+
+std::vector<std::string> StorageManager::table_names() const {
+  std::vector<std::string> table_names;
+  for (auto const& element : _table_mapping) {
+    table_names.push_back(element.first);
   }
-  return std::distance(_table_names.begin(), result);
+  return table_names;
 }
-
-bool StorageManager::has_table(const std::string& name) const {
-  return std::find(_table_names.begin(), _table_names.end(), name) != _table_names.end();
-}
-
-std::vector<std::string> StorageManager::table_names() const { return _table_names; }
 
 void StorageManager::print(std::ostream& out) const {
-  for (size_t index{0}; index < _tables.size(); ++index) {
-    auto table = _tables.at(index);
-    auto table_name = _table_names.at(index);
+  for (auto const& mapping : _table_mapping) {
+    auto table = mapping.second;
+    auto table_name = mapping.first;
     auto columns = table->column_count();
     auto rows = table->row_count();
     auto chunks = table->chunk_count();
@@ -57,9 +49,6 @@ void StorageManager::print(std::ostream& out) const {
   }
 }
 
-void StorageManager::reset() {
-  _tables.clear();
-  _table_names.clear();
-}
+void StorageManager::reset() { _table_mapping.clear(); }
 
 }  // namespace opossum

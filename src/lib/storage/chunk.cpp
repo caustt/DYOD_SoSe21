@@ -19,15 +19,13 @@ void Chunk::add_segment(std::shared_ptr<BaseSegment> segment) { _segments.emplac
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(values.size() == _segments.size(),
               "Invalid size " + std::to_string(values.size()) + " for chunk with size " + std::to_string(_segments.size()));
-  for (size_t column_id{0}; column_id < _segments.size(); ++column_id) {
+  auto segments_size = _segments.size();
+  for (size_t column_id{0}; column_id < segments_size; ++column_id) {
     _segments.at(column_id)->append(values.at(column_id));
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
-  DebugAssert(column_id < _segments.size(), "Invalid column id");
-  return _segments.at(column_id);
-}
+std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const { return _segments.at(column_id); }
 
 ColumnCount Chunk::column_count() const { return (ColumnCount) _segments.size(); }
 

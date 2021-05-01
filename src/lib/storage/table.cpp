@@ -19,7 +19,7 @@ namespace opossum {
 
 Table::Table(const ChunkOffset target_chunk_size) {
   _target_chunk_size = target_chunk_size;
-  _chunks.emplace_back(Chunk());
+  _chunks.emplace_back(std::make_shared<Chunk>());
 }
 
 void Table::add_column(const std::string& name, const std::string& type) {
@@ -36,12 +36,12 @@ void Table::_add_segment(const std::string& type) {
   resolve_data_type(type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>();
-    _chunks.back().add_segment(value_segment);
+    _chunks.back()->add_segment(value_segment);
   });
 }
 
 void Table::_create_new_chunk() {
-  _chunks.emplace_back(Chunk());
+  _chunks.emplace_back(std::make_shared<Chunk>());
   for (size_t column_id = 0; column_id < _column_names.size(); ++column_id) {
     auto type = _column_types.at(column_id);
     _add_segment(type);
@@ -51,20 +51,20 @@ void Table::_create_new_chunk() {
 void Table::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(_chunks.size() > 0, "No chunks present");
 
-  if (_chunks.back().size() >= _target_chunk_size) {
+  if (_chunks.back()->size() >= _target_chunk_size) {
     _create_new_chunk();
   }
 
-  _chunks.back().append(values);
+  _chunks.back()->append(values);
 }
 
-ColumnCount Table::column_count() const { return _chunks[0].column_count(); }
+ColumnCount Table::column_count() const { return _chunks[0]->column_count(); }
 
 uint64_t Table::row_count() const {
   uint64_t total_row_count = 0;
 
   for (const auto& chunk : _chunks) {
-    total_row_count += chunk.size();
+    total_row_count += chunk->size();
   }
 
   return total_row_count;
@@ -90,9 +90,9 @@ const std::string& Table::column_name(const ColumnID column_id) const { return _
 
 const std::string& Table::column_type(const ColumnID column_id) const { return _column_types.at(column_id); }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks.at(chunk_id); }
+Chunk& Table::get_chunk(ChunkID chunk_id) { return *_chunks.at(chunk_id); }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks.at(chunk_id); }
+const Chunk& Table::get_chunk(ChunkID chunk_id) const { return *_chunks.at(chunk_id); }
 
 void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("Implement Table::compress_chunk"); }
 

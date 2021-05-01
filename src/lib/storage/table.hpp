@@ -84,7 +84,7 @@ class Table : private Noncopyable {
 
  protected:
   // Implementation goes here
-  std::vector<Chunk> _chunks;
+  std::vector<std::shared_ptr<Chunk>> _chunks;
   ChunkOffset _target_chunk_size;
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;

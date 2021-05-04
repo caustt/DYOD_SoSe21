@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "fixed_size_attribute_vector.hpp"
 #include "types.hpp"
 #include "value_segment.hpp"
 
@@ -35,21 +36,37 @@ class DictionarySegment : public BaseSegment {
 
     _dictionary = std::make_shared<std::vector<T>>(distinct_values.begin(), distinct_values.end());
 
-    std::map<T, uint32_t> values_to_index;
-    uint32_t index = 0;
+    auto number_distinct_values = _dictionary->size();
 
+    if (number_distinct_values <= std::numeric_limits<uint8_t>::max()) {
+      _initialize_attribute_vector<uint8_t, T>(distinct_values, value_segment);
+    } else if (number_distinct_values <= std::numeric_limits<uint16_t>::max()) {
+      _initialize_attribute_vector<uint16_t, T>(distinct_values, value_segment);
+    } else if (number_distinct_values <= std::numeric_limits<uint32_t>::max()) {
+      _initialize_attribute_vector<uint32_t, T>(distinct_values, value_segment);
+    } else {
+      _initialize_attribute_vector<uint64_t, T>(distinct_values, value_segment);
+    }
+  }
+
+  template <typename uintX_t, typename DataType>
+  void _initialize_attribute_vector(std::set<DataType> distinct_values,
+                                    std::shared_ptr<ValueSegment<DataType>> value_segment) {
+    auto fixed_attribute_vector = std::make_shared<FixedSizeAttributeVector<uintX_t>>(value_segment->size());
+    _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(fixed_attribute_vector);
+
+    std::map<DataType, uintX_t> values_to_index;
+    uintX_t index = 0;
     for (auto value : distinct_values) {
       values_to_index[value] = index;
       index++;
     }
 
-    _attribute_vector = std::make_shared<std::vector<uint32_t>>();
-    _attribute_vector->reserve(value_segment->size());
-
     index = 0;
     for (auto value : value_segment->values()) {
       auto value_id = values_to_index.at(value);
-      _attribute_vector->push_back(value_id);
+      _attribute_vector->set(index, ValueID{value_id});
+      index++;
     }
   }
 
@@ -61,7 +78,7 @@ class DictionarySegment : public BaseSegment {
 
   // return the value at a certain position.
   T get(const size_t chunk_offset) const {
-    ValueID value_id = (ValueID)_attribute_vector->at(chunk_offset);
+    ValueID value_id = (ValueID)_attribute_vector->get(chunk_offset);
     return value_by_value_id(value_id);
   }
 
@@ -74,7 +91,7 @@ class DictionarySegment : public BaseSegment {
   std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary; }
 
   // returns an underlying data structure
-  std::shared_ptr<std::vector<u_int32_t>> attribute_vector() const { return _attribute_vector; }
+  std::shared_ptr<BaseAttributeVector> attribute_vector() const { return _attribute_vector; }
 
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const { return _dictionary->at(value_id); }
@@ -116,7 +133,7 @@ class DictionarySegment : public BaseSegment {
 
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
-  std::shared_ptr<std::vector<u_int32_t>> _attribute_vector;
+  std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 
 }  // namespace opossum

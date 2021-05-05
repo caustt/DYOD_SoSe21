@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
+#include "../lib/storage/dictionary_segment.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
@@ -79,6 +80,21 @@ TEST_F(StorageTableTest, GetChunkConst) {
   t.append({3, "!"});
   const Chunk& c = t.get_chunk(ChunkID{1});
   EXPECT_EQ(c.size(), 1);
+}
+
+TEST_F(StorageTableTest, ApplyDictionaryEncoding) {
+  t.append({4, "Hello"});
+  t.append({6, "Hello"});
+  t.append({6, "Hello"});
+
+  t.compress_chunk(ChunkID{0});
+
+  auto& chunk = t.get_chunk(ChunkID{0});
+  auto int_segment = chunk.get_segment(ColumnID{0});
+  auto int_dict_encoded_segment = std::static_pointer_cast<DictionarySegment<int32_t>>(int_segment);
+
+  EXPECT_EQ(int_dict_encoded_segment->get(0), 4);
+  EXPECT_EQ(int_dict_encoded_segment->get(1), 6);
 }
 
 }  // namespace opossum

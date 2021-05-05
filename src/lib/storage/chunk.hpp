@@ -40,12 +40,15 @@ class Chunk : private Noncopyable {
   // Returns the segment at a given position
   std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
 
-
   static std::shared_ptr<Chunk> apply_dictionary_encoding(const Chunk& chunk,
                                                           const std::vector<std::string>& column_names);
 
  protected:
   std::vector<std::shared_ptr<BaseSegment>> _segments;
-};
 
+ private:
+  static void _encode_segment(std::shared_ptr<BaseSegment> segment, ColumnCount column_id,
+                              const std::string& column_type,
+                              std::vector<std::shared_ptr<BaseSegment>>& encoded_segments);
+};
 }  // namespace opossum

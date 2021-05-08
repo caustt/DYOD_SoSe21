@@ -129,7 +129,9 @@ class DictionarySegment : public BaseSegment {
   ChunkOffset size() const override { return _attribute_vector->size(); }
 
   // returns the calculated memory usage
-  size_t estimate_memory_usage() const final { return 0; }
+  size_t estimate_memory_usage() const final {
+    return _dictionary->size() * sizeof(T) + _attribute_vector->size() * _attribute_vector->width();
+  }
 
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;

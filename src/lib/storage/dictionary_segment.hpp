@@ -27,47 +27,12 @@ class DictionarySegment : public BaseSegment {
   /**
    * Creates a Dictionary segment from a given value segment.
    */
+
   explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) {
     auto value_segment = std::static_pointer_cast<ValueSegment<T>>(base_segment);
-    std::set<T> distinct_values;
-    for (auto value : value_segment->values()) {
-      distinct_values.insert(value);
-    }
-
-    _dictionary = std::make_shared<std::vector<T>>(distinct_values.begin(), distinct_values.end());
-
-    auto number_distinct_values = _dictionary->size();
-
-    if (number_distinct_values <= std::numeric_limits<uint8_t>::max()) {
-      _initialize_attribute_vector<uint8_t, T>(distinct_values, value_segment);
-    } else if (number_distinct_values <= std::numeric_limits<uint16_t>::max()) {
-      _initialize_attribute_vector<uint16_t, T>(distinct_values, value_segment);
-    } else if (number_distinct_values <= std::numeric_limits<uint32_t>::max()) {
-      _initialize_attribute_vector<uint32_t, T>(distinct_values, value_segment);
-    } else {
-      _initialize_attribute_vector<uint64_t, T>(distinct_values, value_segment);
-    }
-  }
-
-  template <typename uintX_t, typename DataType>
-  void _initialize_attribute_vector(std::set<DataType> distinct_values,
-                                    std::shared_ptr<ValueSegment<DataType>> value_segment) {
-    auto fixed_attribute_vector = std::make_shared<FixedSizeAttributeVector<uintX_t>>(value_segment->size());
-    _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(fixed_attribute_vector);
-
-    std::map<DataType, uintX_t> values_to_index;
-    uintX_t index = 0;
-    for (auto value : distinct_values) {
-      values_to_index[value] = index;
-      index++;
-    }
-
-    index = 0;
-    for (auto value : value_segment->values()) {
-      auto value_id = values_to_index.at(value);
-      _attribute_vector->set(index, ValueID{value_id});
-      index++;
-    }
+    _dictionary = _initialize_dictionary(value_segment);
+    int minimal_bits = _get_minimal_number_of_bits_for_dictionary_size(_dictionary->size());
+    _attribute_vector = _create_attribute_vector_with_type(minimal_bits, value_segment, _dictionary);
   }
 
   // SEMINAR INFORMATION: Since most of these methods depend on the template parameter, you will have to implement
@@ -136,6 +101,67 @@ class DictionarySegment : public BaseSegment {
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
-};
 
+  std::shared_ptr<std::vector<T>> _initialize_dictionary(const std::shared_ptr<ValueSegment<T>> value_segment) {
+    std::set<T> distinct_values;
+    for (auto value : value_segment->values()) {
+      distinct_values.insert(value);
+    }
+    return std::make_shared<std::vector<T>>(distinct_values.begin(), distinct_values.end());
+  }
+
+  int _get_minimal_number_of_bits_for_dictionary_size(size_t size) {
+    if (size <= std::numeric_limits<uint8_t>::max()) {
+      return 8;
+    } else if (size <= std::numeric_limits<uint16_t>::max()) {
+      return 16;
+    } else if (size <= std::numeric_limits<uint32_t>::max()) {
+      return 32;
+    } else {
+      return 64;
+    }
+  }
+
+  std::shared_ptr<BaseAttributeVector> _create_attribute_vector_with_type(
+      int minimal_bytes, std::shared_ptr<ValueSegment<T>> value_segment, std::shared_ptr<std::vector<T>> dictionary) {
+    std::shared_ptr<BaseAttributeVector> result;
+    switch (minimal_bytes) {
+      case 8:
+        result = _initialize_attribute_vector<uint8_t>(dictionary, value_segment);
+        break;
+      case 16:
+        result = _initialize_attribute_vector<uint16_t>(dictionary, value_segment);
+        break;
+      case 32:
+        result = _initialize_attribute_vector<uint32_t>(dictionary, value_segment);
+        break;
+      default:
+        result = _initialize_attribute_vector<uint64_t>(dictionary, value_segment);
+    }
+    return result;
+  }
+
+  template <typename uintX_t>
+  std::shared_ptr<BaseAttributeVector> _initialize_attribute_vector(std::shared_ptr<std::vector<T>> dictionary,
+                                                                    std::shared_ptr<ValueSegment<T>> value_segment) {
+    auto fixed_attribute_vector = std::make_shared<FixedSizeAttributeVector<uintX_t>>(value_segment->size());
+    std::shared_ptr<BaseAttributeVector> attribute_vector =
+        std::dynamic_pointer_cast<BaseAttributeVector>(fixed_attribute_vector);
+
+    std::map<T, uintX_t> values_to_index;
+    uintX_t index = 0;
+    for (auto value : *dictionary) {
+      values_to_index[value] = index;
+      index++;
+    }
+
+    index = 0;
+    for (auto value : value_segment->values()) {
+      auto value_id = values_to_index.at(value);
+      attribute_vector->set(index, ValueID{value_id});
+      index++;
+    }
+    return attribute_vector;
+  }
+};
 }  // namespace opossum

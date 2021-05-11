@@ -7,7 +7,9 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "fixed_size_attribute_vector.hpp"
 #include "types.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -25,55 +27,141 @@ class DictionarySegment : public BaseSegment {
   /**
    * Creates a Dictionary segment from a given value segment.
    */
-  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment);
+
+  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) {
+    auto value_segment = std::static_pointer_cast<ValueSegment<T>>(base_segment);
+    _dictionary = _initialize_dictionary(value_segment);
+    int minimal_bits = _get_minimal_number_of_bits_for_dictionary_size(_dictionary->size());
+    _attribute_vector = _create_attribute_vector_with_type(minimal_bits, value_segment, _dictionary);
+  }
 
   // SEMINAR INFORMATION: Since most of these methods depend on the template parameter, you will have to implement
   // the DictionarySegment in this file. Replace the method signatures with actual implementations.
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override { return get(chunk_offset); };
 
   // return the value at a certain position.
-  T get(const size_t chunk_offset) const;
+  T get(const size_t chunk_offset) const {
+    ValueID value_id = (ValueID)_attribute_vector->get(chunk_offset);
+    return value_by_value_id(value_id);
+  }
 
   // dictionary segments are immutable
-  void append(const AllTypeVariant& val) override;
+  void append(const AllTypeVariant& val) override {
+    throw std::runtime_error("Append failed: DictionarySegment is immutable.");
+  }
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const;
+  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary; }
 
   // returns an underlying data structure
-  std::shared_ptr<const BaseAttributeVector> attribute_vector() const;
+  std::shared_ptr<BaseAttributeVector> attribute_vector() const { return _attribute_vector; }
 
   // return the value represented by a given ValueID
-  const T& value_by_value_id(ValueID value_id) const;
+  const T& value_by_value_id(ValueID value_id) const { return _dictionary->at(value_id); }
 
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
-  ValueID lower_bound(T value) const;
+  ValueID lower_bound(T value) const {
+    auto forward_iterator = std::lower_bound(_dictionary->begin(), _dictionary->end(), value);
+    if (forward_iterator == _dictionary->end()) {
+      return INVALID_VALUE_ID;
+    }
+    return (ValueID)(forward_iterator - _dictionary->begin());
+  }
 
   // same as lower_bound(T), but accepts an AllTypeVariant
-  ValueID lower_bound(const AllTypeVariant& value) const;
+  ValueID lower_bound(const AllTypeVariant& value) const { return lower_bound(value); }
 
   // returns the first value ID that refers to a value > the search value
   // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
-  ValueID upper_bound(T value) const;
+  ValueID upper_bound(T value) const {
+    auto forward_iterator = std::upper_bound(_dictionary->begin(), _dictionary->end(), value);
+    if (forward_iterator == _dictionary->end()) {
+      return INVALID_VALUE_ID;
+    }
+    return (ValueID)(forward_iterator - _dictionary->begin());
+  }
 
   // same as upper_bound(T), but accepts an AllTypeVariant
-  ValueID upper_bound(const AllTypeVariant& value) const;
+  ValueID upper_bound(const AllTypeVariant& value) const { return upper_bound(value); }
 
   // return the number of unique_values (dictionary entries)
-  size_t unique_values_count() const;
+  size_t unique_values_count() const { return _dictionary->size(); }
 
   // return the number of entries
-  ChunkOffset size() const override;
+  ChunkOffset size() const override { return _attribute_vector->size(); }
 
   // returns the calculated memory usage
-  size_t estimate_memory_usage() const final;
+  size_t estimate_memory_usage() const final {
+    return _dictionary->size() * sizeof(T) + _attribute_vector->size() * _attribute_vector->width();
+  }
 
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
-};
 
+  std::shared_ptr<std::vector<T>> _initialize_dictionary(const std::shared_ptr<ValueSegment<T>> value_segment) {
+    std::set<T> distinct_values;
+    for (auto value : value_segment->values()) {
+      distinct_values.insert(value);
+    }
+    return std::make_shared<std::vector<T>>(distinct_values.begin(), distinct_values.end());
+  }
+
+  int _get_minimal_number_of_bits_for_dictionary_size(size_t size) {
+    if (size <= std::numeric_limits<uint8_t>::max()) {
+      return 8;
+    } else if (size <= std::numeric_limits<uint16_t>::max()) {
+      return 16;
+    } else if (size <= std::numeric_limits<uint32_t>::max()) {
+      return 32;
+    } else {
+      return 64;
+    }
+  }
+
+  std::shared_ptr<BaseAttributeVector> _create_attribute_vector_with_type(
+      int minimal_bytes, std::shared_ptr<ValueSegment<T>> value_segment, std::shared_ptr<std::vector<T>> dictionary) {
+    std::shared_ptr<BaseAttributeVector> result;
+    switch (minimal_bytes) {
+      case 8:
+        result = _initialize_attribute_vector<uint8_t>(dictionary, value_segment);
+        break;
+      case 16:
+        result = _initialize_attribute_vector<uint16_t>(dictionary, value_segment);
+        break;
+      case 32:
+        result = _initialize_attribute_vector<uint32_t>(dictionary, value_segment);
+        break;
+      default:
+        result = _initialize_attribute_vector<uint64_t>(dictionary, value_segment);
+    }
+    return result;
+  }
+
+  template <typename uintX_t>
+  std::shared_ptr<BaseAttributeVector> _initialize_attribute_vector(std::shared_ptr<std::vector<T>> dictionary,
+                                                                    std::shared_ptr<ValueSegment<T>> value_segment) {
+    auto fixed_attribute_vector = std::make_shared<FixedSizeAttributeVector<uintX_t>>(value_segment->size());
+    std::shared_ptr<BaseAttributeVector> attribute_vector =
+        std::dynamic_pointer_cast<BaseAttributeVector>(fixed_attribute_vector);
+
+    std::map<T, uintX_t> values_to_index;
+    uintX_t index = 0;
+    for (auto value : *dictionary) {
+      values_to_index[value] = index;
+      index++;
+    }
+
+    index = 0;
+    for (auto value : value_segment->values()) {
+      auto value_id = values_to_index.at(value);
+      attribute_vector->set(index, ValueID{value_id});
+      index++;
+    }
+    return attribute_vector;
+  }
+};
 }  // namespace opossum

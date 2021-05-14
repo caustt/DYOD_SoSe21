@@ -23,7 +23,7 @@ class DictionarySegmentFixture : public DictionarySegment<T> {
   };
 };
 
-class StorageDictionarySegmentTest : public ::testing::Test {
+class StorageDictionarySegmentTest : public BaseTest  {
  protected:
   std::shared_ptr<opossum::ValueSegment<int>> vc_int = std::make_shared<opossum::ValueSegment<int>>();
   std::shared_ptr<opossum::ValueSegment<std::string>> vc_str = std::make_shared<opossum::ValueSegment<std::string>>();

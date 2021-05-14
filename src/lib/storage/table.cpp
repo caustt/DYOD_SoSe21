@@ -67,10 +67,9 @@ void Table::create_new_chunk() {
 }
 
 ColumnCount Table::column_count() const {
-  // Implementation goes here
   DebugAssert(_chunks.size() >= 1, "Invalid amount of chunks");
 
-  return _chunks.at(0).column_count();
+  return _chunks[0]->column_count();
 }
 
 uint64_t Table::row_count() const {

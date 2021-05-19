@@ -64,7 +64,7 @@ class TableScan : public AbstractOperator {
   }
 
   void _collect_matched_rows_for_reference_segment(std::shared_ptr<ReferenceSegment> segment,
-                                                   std::vector<RowID>& matched_row_ids) {
+                                                   std::shared_ptr<PosList> matched_row_ids) {
     for (auto const& row_id : *(segment->pos_list())) {
       const ChunkID chunk_id = row_id.chunk_id;
       const ChunkOffset real_chunk_offset = row_id.chunk_offset;
@@ -84,7 +84,7 @@ class TableScan : public AbstractOperator {
         const auto value_segment = std::dynamic_pointer_cast<ValueSegment<Type>>(actual_segment);
         if (value_segment) {
           if (_evaluate_scan_predicate(value_segment->values().at(real_chunk_offset))) {
-            matched_row_ids.push_back(RowID{chunk_id, real_chunk_offset});
+            matched_row_ids->push_back(RowID{chunk_id, real_chunk_offset});
           }
           return;
         }
@@ -93,7 +93,7 @@ class TableScan : public AbstractOperator {
         const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<Type>>(actual_segment);
         if (dictionary_segment) {
           if (_evaluate_scan_predicate(dictionary_segment->get(real_chunk_offset))) {
-            matched_row_ids.push_back(RowID{chunk_id, real_chunk_offset});
+            matched_row_ids->push_back(RowID{chunk_id, real_chunk_offset});
           }
           return;
         }
@@ -104,11 +104,11 @@ class TableScan : public AbstractOperator {
 
   template <typename T>
   void _collect_matched_rows_for_value_segment(ChunkID chunk_id, std::shared_ptr<ValueSegment<T>> segment,
-                                               std::vector<RowID>& matched_row_ids) {
+                                               std::shared_ptr<PosList> matched_row_ids) {
     ChunkOffset chunk_offset{0};
     for (const T& value : segment->values()) {
       if (_evaluate_scan_predicate(value)) {
-        matched_row_ids.push_back(RowID{chunk_id, chunk_offset});
+        matched_row_ids->push_back(RowID{chunk_id, chunk_offset});
       }
       chunk_offset++;
     }
@@ -116,7 +116,7 @@ class TableScan : public AbstractOperator {
 
   template <typename T>
   void _collect_matched_rows_for_dictionary_segment(ChunkID chunk_id, std::shared_ptr<DictionarySegment<T>> segment,
-                                                    std::vector<RowID>& matched_row_ids) {
+                                                    std::shared_ptr<PosList> matched_row_ids) {
     // trivial solution: decompress every value id and then compare it to the
     // search value
     // TODO: better solution (see Sprint document)
@@ -124,7 +124,7 @@ class TableScan : public AbstractOperator {
     for (ChunkOffset chunk_offset{0}; chunk_offset < segment->size(); ++chunk_offset) {
       const T value = segment->get(chunk_offset);
       if (_evaluate_scan_predicate(value)) {
-        matched_row_ids.push_back(RowID{chunk_id, chunk_offset});
+        matched_row_ids->push_back(RowID{chunk_id, chunk_offset});
       }
     }
   }

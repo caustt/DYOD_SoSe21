@@ -82,7 +82,7 @@ uint64_t Table::row_count() const {
   return total_row_count;
 }
 
-ChunkID Table::chunk_count() const { return (ChunkID) _chunks.size(); }
+ChunkID Table::chunk_count() const { return (ChunkID)_chunks.size(); }
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   auto result = std::find(_column_names.begin(), _column_names.end(), column_name);
@@ -110,6 +110,14 @@ void Table::compress_chunk(ChunkID chunk_id) {
   const Chunk& chunk = get_chunk(chunk_id);
   std::shared_ptr<Chunk> encoded_chunk = Chunk::apply_dictionary_encoding(chunk, _column_types);
   _chunks.at(chunk_id) = encoded_chunk;
+}
+
+void Table::emplace_chunk(std::shared_ptr<Chunk> chunk) {
+  if (chunk_count() == 1 && _chunks.at(0)->size() == ChunkOffset{0}) {
+    _chunks.at(0) = chunk;
+  } else {
+    _chunks.push_back(chunk);
+  }
 }
 
 }  // namespace opossum

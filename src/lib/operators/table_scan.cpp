@@ -63,7 +63,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   std::vector<ReferenceSegment> output_segments;
 
   auto output_table = std::make_shared<Table>();
-  auto output_chunk = std::make_shared<Chunk>();
+  auto output_chunk = Chunk();
 
   ColumnCount column_count = input_table->column_count();
 
@@ -78,30 +78,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     auto new_segment = std::make_shared<ReferenceSegment>(real_input_table, column_id, matched_row_ids);
-    output_chunk->add_segment(new_segment);
-    output_table->add_column(input_table->column_name(column_id), input_table->column_type(column_id));
+    output_chunk.add_segment(new_segment);
+    output_table->add_column_definition(input_table->column_name(column_id), input_table->column_type(column_id));
   }
 
-  //  output_table->emplace_chunk(std::move(output_chunk));
-  output_table->emplace_chunk(output_chunk);
+  output_table->emplace_chunk(std::move(output_chunk));
 
   return output_table;
-
-  //  create table
-  //  new chunk
-  //  for column in columns
-  //
-  //        create reference segment
-  //        add to chunk
-  //  add chunk to new table
-
-  // 1. get result of in
-  // 2. filter
-  // 3. create an empty table
-  // 4. fill with reference segments
-  // 5. return
-
-  //return nullptr;
 };
 
 }  // namespace opossum

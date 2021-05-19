@@ -23,17 +23,16 @@ Table::Table(const ChunkOffset target_chunk_size) {
 }
 
 void Table::add_column_definition(const std::string& name, const std::string& type) {
-  // Implementation goes here
+  _column_names.emplace_back(name);
+  _column_types.emplace_back(type);
 }
 
 void Table::add_column(const std::string& name, const std::string& type) {
   DebugAssert(_chunks.size() == 1, "Invalid amount of chunks");
   DebugAssert(row_count() == 0, "Too many rows");
 
+  add_column_definition(name, type);
   _add_segment(type);
-
-  _column_names.emplace_back(name);
-  _column_types.emplace_back(type);
 }
 
 void Table::_add_segment(const std::string& type) {
@@ -112,11 +111,17 @@ void Table::compress_chunk(ChunkID chunk_id) {
   _chunks.at(chunk_id) = encoded_chunk;
 }
 
-void Table::emplace_chunk(std::shared_ptr<Chunk> chunk) {
+void Table::emplace_chunk(Chunk chunk) {
+  auto chunk_pointer = std::make_shared<Chunk>();
+  // not goood
+  for (ColumnID id = ColumnID{0}; id < chunk.column_count(); ++id) {
+    chunk_pointer->add_segment(chunk.get_segment(id));
+  }
+
   if (chunk_count() == 1 && _chunks.at(0)->size() == ChunkOffset{0}) {
-    _chunks.at(0) = chunk;
+    _chunks.at(0) = chunk_pointer;
   } else {
-    _chunks.push_back(chunk);
+    _chunks.push_back(chunk_pointer);
   }
 }
 

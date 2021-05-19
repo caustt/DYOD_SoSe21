@@ -60,15 +60,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     }
   }
 
-  // ===============  matched_row_ids should be filled at this point ===============
-
-  // TODO: create output_segments
-
-  for (RowID row_id : *matched_row_ids) {
-    std::cout << "Chunk id: " << row_id.chunk_id << " Offset: " << row_id.chunk_offset << std::endl;
-  }
-
-  //  Chunk reference_chunk =
   std::vector<ReferenceSegment> output_segments;
 
   auto output_table = std::make_shared<Table>();

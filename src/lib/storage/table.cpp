@@ -113,9 +113,10 @@ void Table::compress_chunk(ChunkID chunk_id) {
 
 void Table::emplace_chunk(Chunk chunk) {
   auto chunk_pointer = std::make_shared<Chunk>();
-  // not goood
+  // copy chunk cause function signature is fixed (chunks is not copyable)
   for (ColumnID id = ColumnID{0}; id < chunk.column_count(); ++id) {
-    chunk_pointer->add_segment(chunk.get_segment(id));
+    auto segment = chunk.get_segment(id);
+    chunk_pointer->add_segment(std::move(segment));
   }
 
   if (chunk_count() == 1 && _chunks.at(0)->size() == ChunkOffset{0}) {

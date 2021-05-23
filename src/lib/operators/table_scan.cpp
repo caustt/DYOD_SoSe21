@@ -34,30 +34,31 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     const Chunk& chunk = input_table->get_chunk(chunk_id);
     std::shared_ptr<BaseSegment> segment = chunk.get_segment(_column_id);
 
-    // handle reference segment
-    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-    if (reference_segment) {
-      _collect_matched_rows_for_reference_segment(reference_segment, matched_row_ids);
-    } else {
-      resolve_data_type(column_type, [&](auto type) {
-        using Type = typename decltype(type)::type;
+    resolve_data_type(column_type, [&](auto type) {
+      using Type = typename decltype(type)::type;
 
-        // handle value segment
-        const auto value_segment = std::dynamic_pointer_cast<ValueSegment<Type>>(segment);
-        if (value_segment) {
-          _collect_matched_rows_for_value_segment<Type>(chunk_id, value_segment, matched_row_ids);
-          return;
-        }
+      // handle reference segment
+      const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+      if (reference_segment) {
+        _collect_matched_rows_for_reference_segment<Type>(reference_segment, matched_row_ids);
+        return;
+      }
 
-        // handle dictionary segment
-        const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<Type>>(segment);
-        if (dictionary_segment) {
-          _collect_matched_rows_for_dictionary_segment<Type>(chunk_id, dictionary_segment, matched_row_ids);
-          return;
-        }
-        throw std::logic_error("Unknown segment type");
-      });
-    }
+      // handle value segment
+      const auto value_segment = std::dynamic_pointer_cast<ValueSegment<Type>>(segment);
+      if (value_segment) {
+        _collect_matched_rows_for_value_segment<Type>(chunk_id, value_segment, matched_row_ids);
+        return;
+      }
+
+      // handle dictionary segment
+      const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<Type>>(segment);
+      if (dictionary_segment) {
+        _collect_matched_rows_for_dictionary_segment<Type>(chunk_id, dictionary_segment, matched_row_ids);
+        return;
+      }
+      throw std::logic_error("Unknown segment type");
+    });
   }
 
   std::vector<ReferenceSegment> output_segments;

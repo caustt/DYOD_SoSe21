@@ -29,8 +29,7 @@ const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const {
 ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
 
 size_t ReferenceSegment::estimate_memory_usage() const {
-  return 0;
-  // TODO
+  return size() * sizeof(RowID);
 }
 
 };  // namespace opossum

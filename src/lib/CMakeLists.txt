@@ -6,9 +6,11 @@ set(
     operators/abstract_operator.cpp
     operators/abstract_operator.hpp
     operators/get_table.hpp
+    operators/get_table.cpp
     operators/print.cpp
     operators/print.hpp
     operators/table_scan.hpp
+    operators/table_scan.cpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     storage/base_attribute_vector.hpp
@@ -16,7 +18,9 @@ set(
     storage/chunk.cpp
     storage/chunk.hpp
     storage/dictionary_segment.hpp
+    storage/fixed_size_attribute_vector.hpp
     storage/reference_segment.hpp
+    storage/reference_segment.cpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp

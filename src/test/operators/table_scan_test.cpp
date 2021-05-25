@@ -118,8 +118,10 @@ TEST_F(OperatorsTableScanTest, EmptyResultScan) {
   auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, 90000);
   scan_1->execute();
 
-  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
+  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++){
     EXPECT_EQ(scan_1->get_output()->get_chunk(i).column_count(), 2u);
+    EXPECT_EQ(scan_1->get_output()->get_chunk(i).size(), 0u);
+  }
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {

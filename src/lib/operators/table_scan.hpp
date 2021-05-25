@@ -62,44 +62,41 @@ class TableScan : public AbstractOperator {
     }
   }
 
-  bool _evaluate_scan_predicate_for_dictionary_segment(const ValueID value, const ValueID lower_bound,
-                                                       const ValueID upper_bound, bool value_exists) const {
+  bool _evaluate_scan_predicate_for_dictionary_segment(const ValueID value_id, const ValueID lower_bound,
+                                                       bool value_exists) const {
     switch (_scan_type) {
       case ScanType::OpEquals: {
-        if (!value_exists)
+        if (!value_exists) {
           return false;
-        else
-          return value == lower_bound;
+        } else {
+          return value_id == lower_bound;
+        }
       }
       case ScanType::OpNotEquals: {
         if (!value_exists) {
           return true;
         }
-        return value != lower_bound;
+        return value_id != lower_bound;
       }
       case ScanType::OpLessThan: {
-        return value < lower_bound;
+        return value_id < lower_bound;
       }
       case ScanType::OpLessThanEquals: {
         if (value_exists) {
-          return value <= lower_bound;
+          return value_id <= lower_bound;
         } else {
-          if (lower_bound == 0) {
-            return false;
-          } else {
-            return value <= lower_bound - 1;
-          }
+          return value_id < lower_bound;
         }
       }
       case ScanType::OpGreaterThan: {
         if (value_exists) {
-          return value > lower_bound;
+          return value_id > lower_bound;
         } else {
-          return value >= lower_bound;
+          return value_id >= lower_bound;
         }
       }
       case ScanType::OpGreaterThanEquals: {
-        return value >= lower_bound;
+        return value_id >= lower_bound;
       }
       default: {
         throw std::logic_error("Scan type not supported");
@@ -114,13 +111,13 @@ class TableScan : public AbstractOperator {
       const ChunkID chunk_id = row_id.chunk_id;
       const ChunkOffset real_chunk_offset = row_id.chunk_offset;
 
-      ColumnID column_id = segment->referenced_column_id();
+      const ColumnID column_id = segment->referenced_column_id();
       auto table = segment->referenced_table();
 
       const Chunk& chunk = table->get_chunk(chunk_id);
       const auto actual_segment = chunk.get_segment(column_id);
 
-      std::string column_type = table->column_type(_column_id);
+      const std::string column_type = table->column_type(_column_id);
 
       resolve_data_type(column_type, [&](auto type) {
         using Type = typename decltype(type)::type;
@@ -165,33 +162,21 @@ class TableScan : public AbstractOperator {
   void _collect_matched_rows_for_dictionary_segment(const ChunkID chunk_id,
                                                     const std::shared_ptr<DictionarySegment<T>>& segment,
                                                     const std::shared_ptr<PosList>& matched_row_ids) const {
-    ValueID lower_bound_value = segment->lower_bound(_search_value);
-    ValueID upper_bound_value = segment->upper_bound(_search_value);
-    bool value_exists = true;
+    const ValueID lower_bound_value = segment->lower_bound(_search_value);
+    const T search_value = type_cast<T>(_search_value);
 
-    if (lower_bound_value == INVALID_VALUE_ID ||
-        segment->value_by_value_id(lower_bound_value) != type_cast<T>(_search_value)) {
-      value_exists = false;
-    }
+    const bool value_exists =
+        (lower_bound_value != INVALID_VALUE_ID) && (segment->value_by_value_id(lower_bound_value) == search_value);
 
     const auto attribute_vector = segment->attribute_vector();
     const auto attribute_vector_size = attribute_vector->size();
+    ValueID value_id;
     for (size_t chunk_offset = 0; chunk_offset < attribute_vector_size; ++chunk_offset) {
-      ValueID value_id = attribute_vector->get(chunk_offset);
-      if (_evaluate_scan_predicate_for_dictionary_segment(value_id, lower_bound_value, upper_bound_value,
-                                                          value_exists)) {
+      value_id = attribute_vector->get(chunk_offset);
+      if (_evaluate_scan_predicate_for_dictionary_segment(value_id, lower_bound_value, value_exists)) {
         matched_row_ids->push_back(RowID{chunk_id, static_cast<ChunkOffset>(chunk_offset)});
       }
     }
-
-    // === OLD IMPLEMENTATION ===
-    //        for (ChunkOffset chunk_offset{0}; chunk_offset < segment->size(); ++chunk_offset) {
-    //          const T value = segment->get(chunk_offset);
-    //
-    //          if (_evaluate_scan_predicate(type_cast<T>(_search_value), value)) {
-    //            matched_row_ids->push_back(RowID{chunk_id, chunk_offset});
-    //          }
-    //        }
   }
 };
 

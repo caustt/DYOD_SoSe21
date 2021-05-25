@@ -29,6 +29,7 @@ const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const {
 ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
 
 size_t ReferenceSegment::estimate_memory_usage() const {
+  // we assume only the size of the ReferenceSegment is needed, not the underlying segments containing the actual data
   return size() * sizeof(RowID);
 }
 

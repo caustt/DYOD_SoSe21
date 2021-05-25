@@ -11,7 +11,7 @@ namespace opossum {
 template <typename T>
 class DictionarySegmentFixture : public DictionarySegment<T> {
  public:
-  DictionarySegmentFixture(std::shared_ptr<opossum::ValueSegment<T>> value_segment)
+  explicit DictionarySegmentFixture(std::shared_ptr<opossum::ValueSegment<T>> value_segment)
       : DictionarySegment<T>(value_segment) {}
   int get_minimal_number_of_bits_for_dictionary_size(size_t size) {
     return this->_get_minimal_number_of_bits_for_dictionary_size(size);
@@ -20,7 +20,7 @@ class DictionarySegmentFixture : public DictionarySegment<T> {
                                                                          std::shared_ptr<ValueSegment<T>> value_segment,
                                                                          std::shared_ptr<std::vector<T>> dictionary) {
     return this->_create_attribute_vector_with_type(minimal_bytes, value_segment, dictionary);
-  };
+  }
 };
 
 class StorageDictionarySegmentTest : public BaseTest {

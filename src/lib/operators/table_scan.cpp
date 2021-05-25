@@ -1,13 +1,13 @@
 #include "table_scan.hpp"
 #include <memory>
+#include <utility>
+#include <vector>
 #include <resolve_type.hpp>
 #include <storage/reference_segment.hpp>
-#include <vector>
 
 #include "abstract_operator.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

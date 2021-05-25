@@ -2,10 +2,10 @@
 
 #include <memory>
 #include <optional>
-#include <resolve_type.hpp>
-#include <storage/reference_segment.hpp>
 #include <string>
 #include <vector>
+#include <resolve_type.hpp>
+#include <storage/reference_segment.hpp>
 
 #include "../storage/dictionary_segment.hpp"
 #include "abstract_operator.hpp"

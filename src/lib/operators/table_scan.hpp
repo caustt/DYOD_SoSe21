@@ -35,6 +35,14 @@ class TableScan : public AbstractOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
  private:
+  std::shared_ptr<std::vector<RowID>> _collect_matched_rows(std::shared_ptr<const Table>& input_table) const;
+  void _collect_matched_rows_for_segment(std::shared_ptr<BaseSegment>& segment, std::string& column_type,
+                                         ChunkID chunk_id, std::shared_ptr<std::vector<RowID>>& matched_row_ids) const;
+
+  std::shared_ptr<const Table> _determine_real_table(std::shared_ptr<const Table>& input_table) const;
+  std::shared_ptr<Table> _create_table_for_matched_rows(std::shared_ptr<std::vector<RowID>>& matched_row_ids,
+                                                        std::shared_ptr<const Table>& real_input_table) const;
+
   template <typename T>
   bool _evaluate_scan_predicate(const T& search_value, const T& value) const {
     switch (_scan_type) {
@@ -170,6 +178,7 @@ class TableScan : public AbstractOperator {
 
     const auto attribute_vector = segment->attribute_vector();
     const auto attribute_vector_size = attribute_vector->size();
+
     ValueID value_id;
     for (size_t chunk_offset = 0; chunk_offset < attribute_vector_size; ++chunk_offset) {
       value_id = attribute_vector->get(chunk_offset);

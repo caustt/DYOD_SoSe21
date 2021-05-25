@@ -35,7 +35,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   auto output_table = _create_table_for_matched_rows(matched_row_ids, real_input_table);
 
   return output_table;
-};
+}
 
 std::shared_ptr<const Table> TableScan::_determine_real_table(std::shared_ptr<const Table>& input_table) const {
   auto first_segment = input_table->get_chunk(ChunkID{0}).get_segment(ColumnID{0});

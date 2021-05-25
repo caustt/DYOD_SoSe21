@@ -8,7 +8,7 @@ namespace opossum {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
                                    const ColumnID referenced_column_id, const std::shared_ptr<const PosList>& pos)
-    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos(pos){};
+    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos(pos) {}
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   const RowID row_id = _pos->at(chunk_offset);
@@ -33,4 +33,4 @@ size_t ReferenceSegment::estimate_memory_usage() const {
   return size() * sizeof(RowID);
 }
 
-};  // namespace opossum
+}  // namespace opossum

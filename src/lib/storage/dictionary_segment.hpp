@@ -1,16 +1,18 @@
 #pragma once
 
 #include <limits>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "../type_cast.hpp"
 #include "all_type_variant.hpp"
 #include "fixed_size_attribute_vector.hpp"
 #include "types.hpp"
 #include "value_segment.hpp"
-#include "../type_cast.hpp"
 
 namespace opossum {
 
@@ -159,7 +161,7 @@ class DictionarySegment : public BaseSegment {
     index = 0;
     for (auto value : value_segment->values()) {
       auto value_id = values_to_index.at(value);
-      attribute_vector->set(index, ValueID{value_id});
+      attribute_vector->set(index, static_cast<ValueID>(value_id));
       index++;
     }
     return attribute_vector;
